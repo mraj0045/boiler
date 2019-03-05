@@ -63,10 +63,13 @@ class MapProcessor : AbstractProcessor() {
         val classBuilder = createClassBuilder(fileName)
         val companionBuilder = createCompanionBuilder(pack, fileName)
         val mapBuilder = mapBuilder()
+        val objectBuilder = objectBuilder(element)
+        val fieldsList = mutableListOf<String>()
 
         for (enclosed in element.enclosedElements) {
             if (enclosed.kind == ElementKind.FIELD) {
                 val fieldName = enclosed.simpleName.toString()
+                fieldsList.add(fieldName)
 
                 var key = enclosed.getAnnotation(Entry::class.java)?.key
                 if (key.isNullOrEmpty()) key = enclosed.simpleName.toString()
@@ -80,10 +83,22 @@ class MapProcessor : AbstractProcessor() {
                 classBuilder.addFunction(createSetterFunction(pack, fileName, fieldName, fieldType))
 
                 mapBuilder.addStatement("$fieldName?.run{ map.put(${fieldName.toUpperCase()}, this.toString()) }")
+
+                objectBuilder.addStatement(
+                    "if(map.contains(${fieldName.toUpperCase()})) $fieldName = ${getMapStatement(
+                        fieldName,
+                        enclosed
+                    )}"
+                )
             }
         }
         mapBuilder.addStatement("return map")
+        objectBuilder.addStatement(
+            "return %T(${fieldsList.toString().removePrefix("[").removeSuffix("]")})",
+            element.asType().asTypeName()
+        )
         classBuilder.addFunction(mapBuilder.build())
+        classBuilder.addFunction(objectBuilder.build())
         classBuilder.addType(companionBuilder.build())
         val file = fileBuilder.addType(classBuilder.build()).build()
         val genDir = processingEnv.options[KAPT_KOTLIN_GENERATED_OPTION_NAME]
@@ -109,6 +124,18 @@ class MapProcessor : AbstractProcessor() {
             .addStatement("val map = hashMapOf<%T,%T>()", String::class, String::class)
     }
 
+    private fun objectBuilder(element: Element): FunSpec.Builder {
+        val className = element.asType().asTypeName()
+        return FunSpec.builder("toObject")
+            .returns(className)
+            .addParameter(
+                ParameterSpec.builder(
+                    "map",
+                    mapClass().parameterizedBy(stringClass(), stringClass())
+                ).build()
+            )
+    }
+
     private fun createCompanionProperty(fieldName: String, key: String): PropertySpec {
         return PropertySpec.builder(fieldName.toUpperCase(), String::class, KModifier.PRIVATE, KModifier.CONST)
             .initializer("%S", key)
@@ -129,6 +156,16 @@ class MapProcessor : AbstractProcessor() {
             .addStatement("this.%N = %N", fieldName, fieldName)
             .addStatement("return this")
             .build()
+    }
+
+    private fun getMapStatement(key: String, element: Element): String {
+        return when {
+            element.asType().asTypeName().isInt() -> "map[${key.toUpperCase()}]?.toIntOrNull()"
+            element.asType().asTypeName().isFloat() -> "map[${key.toUpperCase()}]?.toFloatOrNull()"
+            element.asType().asTypeName().isDouble() -> "map[${key.toUpperCase()}]?.toDoubleOrNull()"
+            element.asType().asTypeName().isBoolean() -> "map[${key.toUpperCase()}]?.toBoolean()"
+            else -> "map[${key.toUpperCase()}]"
+        }
     }
 }
 

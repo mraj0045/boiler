@@ -6,7 +6,7 @@ import com.boiler.MapBuilder
 @MapBuilder
 class Post(
     @Entry(key = "name1")
-    val name: String,
+    val name: String?,
     @Entry(key = "age")
-    val age: Int
+    val age: Int?
 )
