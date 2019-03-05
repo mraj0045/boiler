@@ -1,1 +1,1 @@
-include ':app'
+include ':app', ':boiler', ':boiler_compiler'
