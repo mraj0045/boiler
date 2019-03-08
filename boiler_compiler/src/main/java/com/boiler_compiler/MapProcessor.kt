@@ -1,6 +1,7 @@
 package com.boiler_compiler
 
 import com.boiler.Entry
+import com.boiler.Ignore
 import com.boiler.MapBuilder
 import com.boiler_compiler.MapProcessor.Companion.KAPT_KOTLIN_GENERATED_OPTION_NAME
 import com.google.auto.service.AutoService
@@ -51,14 +52,20 @@ class MapProcessor : AbstractProcessor() {
     }
 
     override fun getSupportedAnnotationTypes(): Set<String> {
-        return mutableSetOf(MapBuilder::class.java.canonicalName, Entry::class.java.canonicalName)
+        return mutableSetOf(
+            MapBuilder::class.java.canonicalName,
+            Entry::class.java.canonicalName,
+            Ignore::class.java.canonicalName
+        )
     }
 
     private fun processAnnotation(element: Element) {
         val className = element.simpleName.toString()
         val pack = processingEnv.elementUtils.getPackageOf(element).toString()
+        var suffix = element.getAnnotation(MapBuilder::class.java).suffix.capitalize()
+        if (suffix.isEmpty()) suffix = SUFFIX
 
-        val fileName = "$className$SUFFIX"
+        val fileName = "$className$suffix"
         val fileBuilder = FileSpec.builder(pack, fileName)
         val classBuilder = createClassBuilder(fileName)
         val companionBuilder = createCompanionBuilder(pack, fileName)
@@ -68,28 +75,30 @@ class MapProcessor : AbstractProcessor() {
 
         for (enclosed in element.enclosedElements) {
             if (enclosed.kind == ElementKind.FIELD) {
-                val fieldName = enclosed.simpleName.toString()
-                fieldsList.add(fieldName)
+                if (enclosed.getAnnotation(Ignore::class.java) == null) {
+                    val fieldName = enclosed.simpleName.toString()
+                    fieldsList.add(fieldName)
 
-                var key = enclosed.getAnnotation(Entry::class.java)?.key
-                if (key.isNullOrEmpty()) key = enclosed.simpleName.toString()
+                    var key = enclosed.getAnnotation(Entry::class.java)?.key
+                    if (key.isNullOrEmpty()) key = enclosed.simpleName.toString()
 
-                val fieldType = getTypeName(enclosed)
+                    val fieldType = getTypeName(enclosed)
 
-                companionBuilder.addProperty(createCompanionProperty(fieldName, key))
+                    companionBuilder.addProperty(createCompanionProperty(fieldName, key))
 
-                classBuilder.addProperty(createFieldProperty(fieldName, fieldType))
+                    classBuilder.addProperty(createFieldProperty(fieldName, fieldType))
 
-                classBuilder.addFunction(createSetterFunction(pack, fileName, fieldName, fieldType))
+                    classBuilder.addFunction(createSetterFunction(pack, fileName, fieldName, fieldType))
 
-                mapBuilder.addStatement("$fieldName?.run{ map.put(${fieldName.toUpperCase()}, this.toString()) }")
+                    mapBuilder.addStatement("$fieldName?.run{ map.put(${fieldName.toUpperCase()}, this.toString()) }")
 
-                objectBuilder.addStatement(
-                    "if(map.contains(${fieldName.toUpperCase()})) $fieldName = ${getMapStatement(
-                        fieldName,
-                        enclosed
-                    )}"
-                )
+                    objectBuilder.addStatement(
+                        "if(map.contains(${fieldName.toUpperCase()})) $fieldName = ${getMapStatement(
+                            fieldName,
+                            enclosed
+                        )}"
+                    )
+                }
             }
         }
         mapBuilder.addStatement("return map")

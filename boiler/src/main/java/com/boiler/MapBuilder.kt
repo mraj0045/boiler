@@ -6,4 +6,7 @@ package com.boiler
 @MustBeDocumented
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.SOURCE)
-annotation class MapBuilder
+annotation class MapBuilder(
+    /** Generated file suffix. Format FileName+suffix*/
+    val suffix: String = ""
+)
