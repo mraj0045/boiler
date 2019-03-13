@@ -5,11 +5,12 @@ import com.boiler.Ignore
 import com.boiler.MapBuilder
 
 @MapBuilder(suffix = "query")
-class Post(
-    @Entry(key = "name1")
+data class Post(
+    @Entry(key = "name")
     val name: String?,
     @Entry(key = "age")
     val age: Int?,
     @Ignore
-    val test: String? = ""
+    val test: String? = "",
+    val dob: String?
 )

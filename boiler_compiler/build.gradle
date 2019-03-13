@@ -1,10 +1,31 @@
 apply plugin: 'java-library'
+apply plugin: 'com.novoda.bintray-release'
 apply plugin: 'kotlin'
 apply plugin: 'kotlin-kapt'
+
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.novoda:bintray-release:0.9'
+    }
+}
+
+publish {
+    userOrg = 'mraj0045' //bintray username
+    groupId = 'com.boiler'
+    artifactId = 'boiler-compiler'
+    publishVersion = '0.0.1'
+    desc = 'Generates Boilerplate codes.'
+    website = 'https://github.com/mraj0045/boiler'
+}
+
 
 repositories {
     mavenCentral()
 }
+
 compileKotlin {
     kotlinOptions {
         jvmTarget = "1.8"

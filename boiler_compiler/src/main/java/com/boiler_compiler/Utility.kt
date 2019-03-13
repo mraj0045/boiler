@@ -19,18 +19,24 @@ internal fun getTypeName(element: Element): TypeName {
         element.asType().asTypeName().isDouble() -> Double::class.asTypeName().copy(nullable = true)
         //Boolean
         element.asType().asTypeName().isBoolean() -> Boolean::class.asTypeName().copy(nullable = true)
+        //Default data type of the variable
         else -> element.asType().asTypeName().copy(nullable = true)
     }
 }
 
 
+/** Checks whether the [TypeName] is of [String] type */
 internal fun TypeName.isString(): Boolean = toString().contains("String", true)
 
+/** Checks whether the [TypeName] is of [Int] type */
 internal fun TypeName.isInt(): Boolean = toString().contains("Integer", true) || toString().contains("int", true)
 
+/** Checks whether the [TypeName] is of [Float] type */
 internal fun TypeName.isFloat(): Boolean = toString().contains("Float", true) || toString().contains("float", true)
 
+/** Checks whether the [TypeName] is of [Double] type */
 internal fun TypeName.isDouble(): Boolean = toString().contains("Double", true) || toString().contains("double", true)
 
+/** Checks whether the [TypeName] is of [Boolean] type */
 internal fun TypeName.isBoolean(): Boolean =
     toString().contains("Boolean", true) || toString().contains("boolean", true)

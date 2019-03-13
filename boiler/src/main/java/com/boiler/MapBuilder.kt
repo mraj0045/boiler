@@ -1,7 +1,9 @@
 package com.boiler
 
 /**
- * Generates map code for the class annotated with this annotation.
+ * Generates HashMap code for the fields in the class annotated with [MapBuilder].
+ *
+ * Coverts fields to [Map] & [Map] to Object class]
  */
 @MustBeDocumented
 @Target(AnnotationTarget.CLASS)

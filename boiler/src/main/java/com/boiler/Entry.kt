@@ -1,5 +1,9 @@
 package com.boiler
 
+/** For using custom key value for the Field, Annotate the field with [Entry] annotation.
+ *
+ * Custom key value is optional.
+ * */
 @MustBeDocumented
 @Target(AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.SOURCE)

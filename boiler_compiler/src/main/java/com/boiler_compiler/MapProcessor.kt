@@ -77,7 +77,7 @@ class MapProcessor : AbstractProcessor() {
             if (enclosed.kind == ElementKind.FIELD) {
                 if (enclosed.getAnnotation(Ignore::class.java) == null) {
                     val fieldName = enclosed.simpleName.toString()
-                    fieldsList.add(fieldName)
+                    fieldsList.add("$fieldName = $fieldName")
 
                     var key = enclosed.getAnnotation(Entry::class.java)?.key
                     if (key.isNullOrEmpty()) key = enclosed.simpleName.toString()
