@@ -15,10 +15,8 @@ class MainActivity : AppCompatActivity() {
         Log.e("Map Data", post.toMap().toString())
 
         //Convert HashMap to Object
-        val aa: Any = 30
         val map = hashMapOf("name" to "Superman", "age" to "30")
         Log.e("Object Data", PostQuery.init().toObject(map).toString())
-
 
     }
 }
