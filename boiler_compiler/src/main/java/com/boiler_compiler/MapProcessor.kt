@@ -47,6 +47,7 @@ class MapProcessor : AbstractProcessor() {
                 processAnnotation(element)
             }
         } catch (e: Exception) {
+            //IGNORE
         }
         return true
     }
@@ -74,31 +75,29 @@ class MapProcessor : AbstractProcessor() {
         val fieldsList = mutableListOf<String>()
 
         for (enclosed in element.enclosedElements) {
-            if (enclosed.kind == ElementKind.FIELD) {
-                if (enclosed.getAnnotation(Ignore::class.java) == null) {
-                    val fieldName = enclosed.simpleName.toString()
-                    fieldsList.add("$fieldName = $fieldName")
+            if (enclosed.kind == ElementKind.FIELD && enclosed.getAnnotation(Ignore::class.java) == null) {
+                val fieldName = enclosed.simpleName.toString()
+                fieldsList.add("$fieldName = $fieldName")
 
-                    var key = enclosed.getAnnotation(Entry::class.java)?.key
-                    if (key.isNullOrEmpty()) key = enclosed.simpleName.toString()
+                var key = enclosed.getAnnotation(Entry::class.java)?.key
+                if (key.isNullOrEmpty()) key = enclosed.simpleName.toString()
 
-                    val fieldType = getTypeName(enclosed)
+                val fieldType = getTypeName(enclosed)
 
-                    companionBuilder.addProperty(createCompanionProperty(fieldName, key))
+                companionBuilder.addProperty(createCompanionProperty(fieldName, key))
 
-                    classBuilder.addProperty(createFieldProperty(fieldName, fieldType))
+                classBuilder.addProperty(createFieldProperty(fieldName, fieldType))
 
-                    classBuilder.addFunction(createSetterFunction(pack, fileName, fieldName, fieldType))
+                classBuilder.addFunction(createSetterFunction(pack, fileName, fieldName, fieldType))
 
-                    mapBuilder.addStatement("$fieldName?.run{ map.put(${fieldName.toUpperCase()}, this.toString()) }")
+                mapBuilder.addStatement("$fieldName?.run{ map.put(${fieldName.toUpperCase()}, this.toString()) }")
 
-                    objectBuilder.addStatement(
-                        "if(map.contains(${fieldName.toUpperCase()})) $fieldName = ${getMapStatement(
-                            fieldName,
-                            enclosed
-                        )}"
-                    )
-                }
+                objectBuilder.addStatement(
+                    "if(map.contains(${fieldName.toUpperCase()})) $fieldName = ${getMapStatement(
+                        fieldName,
+                        enclosed
+                    )}"
+                )
             }
         }
         mapBuilder.addStatement("return map")
