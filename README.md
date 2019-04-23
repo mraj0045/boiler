@@ -78,7 +78,7 @@ Annotation are explained below,
   * If custom logic to convert the data(e.g., Convert Date to String & vice-versa) use "typeConverter" property
 * Ignore - If annotated, will ignore the field while processing.
 
-Implement the TypeConverter<> class to write custom login and pass the class to "typeConverter" of Entry annotation.
+Implement the TypeConverter<> class to write custom logic and pass the class to "typeConverter" of Entry annotation.
 
 ## Using Generated code
 Once annotated build the project to generate code and can be used like below,
