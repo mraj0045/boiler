@@ -14,7 +14,7 @@ publish {
     userOrg = 'mraj0045' //bintray username
     groupId = 'com.boiler'
     artifactId = 'boiler'
-    publishVersion = '0.0.1'
+    publishVersion = '0.0.2'
     desc = 'Generates Boilerplate codes.'
     website = 'https://github.com/mraj0045/boiler'
 }

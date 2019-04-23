@@ -13,6 +13,8 @@ import javax.lang.model.SourceVersion
 import javax.lang.model.element.Element
 import javax.lang.model.element.ElementKind
 import javax.lang.model.element.TypeElement
+import javax.lang.model.type.DeclaredType
+import javax.lang.model.type.MirroredTypeException
 import javax.lang.model.util.Elements
 import javax.tools.Diagnostic
 
@@ -79,7 +81,8 @@ class MapProcessor : AbstractProcessor() {
                 val fieldName = enclosed.simpleName.toString()
                 fieldsList.add("$fieldName = $fieldName")
 
-                var key = enclosed.getAnnotation(Entry::class.java)?.key
+                val entry: Entry? = enclosed.getAnnotation(Entry::class.java)
+                var key = entry?.key
                 if (key.isNullOrEmpty()) key = enclosed.simpleName.toString()
 
                 val fieldType = getTypeName(enclosed)
@@ -90,14 +93,10 @@ class MapProcessor : AbstractProcessor() {
 
                 classBuilder.addFunction(createSetterFunction(pack, fileName, fieldName, fieldType))
 
-                mapBuilder.addStatement("$fieldName?.run{ map.put(${fieldName.toUpperCase()}, this.toString()) }")
+                addMapStatement(mapBuilder, fieldName, entry)
 
-                objectBuilder.addStatement(
-                    "if(map.contains(${fieldName.toUpperCase()})) $fieldName = ${getMapStatement(
-                        fieldName,
-                        enclosed
-                    )}"
-                )
+                addObjectStatement(objectBuilder, enclosed, fieldName, entry)
+
             }
         }
         mapBuilder.addStatement("return map")
@@ -126,24 +125,6 @@ class MapProcessor : AbstractProcessor() {
         )
     }
 
-    private fun mapBuilder(): FunSpec.Builder {
-        return FunSpec.builder("toMap")
-            .returns(mapClass().parameterizedBy(stringClass(), stringClass()))
-            .addStatement("val map = hashMapOf<%T,%T>()", String::class, String::class)
-    }
-
-    private fun objectBuilder(element: Element): FunSpec.Builder {
-        val className = element.asType().asTypeName()
-        return FunSpec.builder("toObject")
-            .returns(className)
-            .addParameter(
-                ParameterSpec.builder(
-                    "map",
-                    mapClass().parameterizedBy(stringClass(), stringClass())
-                ).build()
-            )
-    }
-
     private fun createCompanionProperty(fieldName: String, key: String): PropertySpec {
         return PropertySpec.builder(fieldName.toUpperCase(), String::class, KModifier.PRIVATE, KModifier.CONST)
             .initializer("%S", key)
@@ -166,14 +147,90 @@ class MapProcessor : AbstractProcessor() {
             .build()
     }
 
-    private fun getMapStatement(key: String, element: Element): String {
+    private fun mapBuilder(): FunSpec.Builder {
+        return FunSpec.builder("toMap")
+            .returns(mapClass().parameterizedBy(stringClass(), stringClass()))
+            .addStatement("val map = hashMapOf<%T,%T>()", String::class, String::class)
+    }
+
+    private fun addMapStatement(mapBuilder: FunSpec.Builder, fieldName: String, entry: Entry?) {
+        val className = getTypeConverter(entry)
+        if (className.simpleName == "IgnoreConverter") {
+            mapBuilder.addStatement("$fieldName?.run{ map.put(${fieldName.toUpperCase()}, this.toString()) } ")
+        } else {
+            mapBuilder.addStatement(
+                "$fieldName?.run{ map.put(${fieldName.toUpperCase()}, %T().format(this)) } ",
+                className
+            )
+        }
+    }
+
+    private fun objectBuilder(element: Element): FunSpec.Builder {
+        val className = element.asType().asTypeName()
+        return FunSpec.builder("toObject")
+            .returns(className)
+            .addParameter(
+                ParameterSpec.builder(
+                    "map",
+                    mapClass().parameterizedBy(stringClass(), stringClass())
+                ).build()
+            )
+    }
+
+
+    private fun addObjectStatement(
+        objectBuilder: FunSpec.Builder,
+        element: Element,
+        fieldName: String,
+        entry: Entry?
+    ) {
+        val className = getTypeConverter(entry)
+        if (className.simpleName == "IgnoreConverter") {
+            objectBuilder.addStatement(
+                "if(map.contains(${fieldName.toUpperCase()})) $fieldName = ${objectStatement(
+                    fieldName,
+                    element
+                )}"
+            )
+        } else {
+            objectBuilder.addStatement(
+                "if(map.contains(${fieldName.toUpperCase()})) $fieldName = ${objectStatement(
+                    fieldName,
+                    element
+                )}", className
+            )
+        }
+    }
+
+    private fun objectStatement(key: String, element: Element): String {
+        val entry: Entry? = element.getAnnotation(Entry::class.java)
+        val className = getTypeConverter(entry)
         return when {
             element.asType().asTypeName().isInt() -> "map[${key.toUpperCase()}]?.toIntOrNull()"
             element.asType().asTypeName().isFloat() -> "map[${key.toUpperCase()}]?.toFloatOrNull()"
             element.asType().asTypeName().isDouble() -> "map[${key.toUpperCase()}]?.toDoubleOrNull()"
             element.asType().asTypeName().isBoolean() -> "map[${key.toUpperCase()}]?.toBoolean()"
-            else -> "map[${key.toUpperCase()}]"
+            else -> {
+                if (className.simpleName == "IgnoreConverter") {
+                    "map[${key.toUpperCase()}]"
+                } else {
+                    "%T().parse(map[${key.toUpperCase()}])"
+                }
+            }
         }
+    }
+
+    private fun getTypeConverter(entry: Entry?): ClassName {
+        try {
+            entry?.typeConverter
+        } catch (e: MirroredTypeException) {
+            val type = e.typeMirror as DeclaredType
+            val pack = processingEnv.elementUtils.getPackageOf(type.asElement()).toString()
+            val className = type.asElement().simpleName.toString()
+            return ClassName(pack, className)
+        }
+
+        return ClassName("com.boiler", "IgnoreConverter")
     }
 }
 

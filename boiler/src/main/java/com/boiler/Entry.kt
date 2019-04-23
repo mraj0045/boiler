@@ -1,5 +1,7 @@
 package com.boiler
 
+import kotlin.reflect.KClass
+
 /** For using custom key value for the Field, Annotate the field with [Entry] annotation.
  *
  * Custom key value is optional.
@@ -11,5 +13,7 @@ annotation class Entry(
     /**
      * Key value to be used for the Map. By default it will the field name.
      */
-    val key: String = ""
+    val key: String = "",
+
+    val typeConverter: KClass<*> = IgnoreConverter::class
 )
